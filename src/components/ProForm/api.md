@@ -5,7 +5,7 @@ ProForm 是通过配置动态生成 el-form 组件，减少模板语法，使表
 2. ProForm 自定义表单元素频繁，基于 `v-model` 语法便捷性考虑自定义渲染使用 `slot`；
 3. `el-form-item` 自定义标签和提交按钮使用 `jsx`，目的是使代码结构更加清晰。
 ##### API
-ProForm 在 el-form 上进行了一层封装，支持了一些预设，并且封装了一些行为。
+ProForm 在 el-form 上进行了一层封装，支持了一些预设。
 ##### ProForm Attributes
 <table style="display: table">
   <tr>
@@ -173,7 +173,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设，并且封
 </table>
 
 ##### formItemsConfig
-支持 [el-form-item attributes](https://element.eleme.io/2.15/#/zh-CN/component/form#form-item-attributes) 的配置，下面的是新增的 API。
+在 [el-form-item attributes](https://element.eleme.io/2.15/#/zh-CN/component/form#form-item-attributes) 基础上，新增了以下 API。
 <table style="display: table">
   <tr>
     <th style="width: 100px">参数</th>

@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import Demo from '@/demos/ProForm/Demo2.vue'
+import Demo from '@/demos/DialogForm/Demo2.vue'
 export default {
   name: 'App',
   components: {
