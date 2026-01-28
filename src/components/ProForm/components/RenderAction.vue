@@ -20,7 +20,7 @@
         submitter: { submitText, resetText, submitButtonProps, resetButtonProps },
         action: { reset, submit },
       } = this
-      // 非原生元素需要放到 props 里，测试是 vue jsx 解析的原因
+      // 非原生属性需要放到 props 里，测试是 vue 解析 jsx 的原因
       const submitProps = { props: submitButtonProps, submitButtonProps }
       const resetProps = { props: resetButtonProps, resetButtonProps }
       const doms = [
