@@ -3,11 +3,11 @@ DialogForm 是 ProForm 的一个变体，本质上仍然是个表单。DialogFor
 以下是几个设计思路：
 1. DialogForm 非受控，可以通过事件监听获取实时数据；
 2. 不支持通过 footer 来自定义页脚，如果要定义页脚需要使用 submitter.render；
-3. `dialog` 提交按钮使用 `jsx`，目的是便于拓展。
+3. `dialog` 提交按钮使用 `jsx`，以便于拓展。
 ##### API
 DialogForm 在 el-dialog 和 el-form 上进行了一层封装，支持了一些预设。
 ##### DialogForm Attributes
-在 <a href="../ProForm/api.md#proform-attributes">ProForm Attributes</a> 基础上，新增了以下 API。
+在 <a href="../ProForm/api.md#proform-attributes" target="_blank">ProForm Attributes</a> 基础上，新增了以下 API。
 <table style="display: table">
   <tr>
     <th style="width: 100px">参数</th>
@@ -75,7 +75,7 @@ DialogForm 在 el-dialog 和 el-form 上进行了一层封装，支持了一些�
 </table>
 
 ##### formItemsConfig
-同 <a href="../ProForm/api.md#formitemsconfig" target="_blank">formItemsConfig</a>
+同 <a href="../ProForm/api.md#formitemsconfig" target="_blank">ProForm formItemsConfig</a>
 
 ##### submitterProps
 submitter 设置 `false` 会隐藏默认的提交按钮。
