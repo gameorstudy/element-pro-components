@@ -84,6 +84,12 @@ ProTable 在 el-table 和 el-form 上进行了一层封装，支持了一些预�
     <td><code>defaultPaginationProps</code></td>
   </tr>
   <tr>
+    <td>paginationMapping</td>
+    <td>分页参数字段映射配置</td>
+    <td><code>paginationMapping</code></td>
+    <td>-</td>
+  </tr>
+  <tr>
     <td>initialValues</td>
     <td>表单默认值</td>
     <td><code>object</code></td>
@@ -321,8 +327,16 @@ const defaultColConfig = {
 
 > ProForm formItemsConfig 中 `valueEnum` 属性在列表中会自动回显 `label` 值。
 
-##### PaginationConfig
-在 <a href="https://element.eleme.io/2.15/#/zh-CN/component/pagination#attributes" target="_blank">el-pagination attributes</a> 的基础上，新增了以下 API。
+##### defaultPaginationProps
+```
+{
+  "page-sizes": [10, 20, 30, 50],
+  layout: "total, sizes, prev, pager, next, jumper",
+  "hide-on-single-page": true,
+}
+```
+
+##### paginationMapping
 <table style="display: table">
   <tr>
     <th style="width: 100px">参数</th>
@@ -344,14 +358,96 @@ const defaultColConfig = {
   </tr>
 </table>
 
-> 如果想全局配置这两个字段，请使用 `Vue.extends` 插入 `props`。<font color="#f56c6c">组件封装则会导致自定义表单元素失效</font>。
+> 通过 `Vue.extends` 方法，可以全局配置这两个字段，参考下方示例代码。
 
-##### defaultPaginationProps
 ```
-{
-  "page-sizes": [10, 20, 30, 50],
-  layout: "total, sizes, prev, pager, next, jumper",
-  "hide-on-single-page": true,
-}
-```
+import Vue from 'vue'
+import { default as ElProTable } from '@/components/ProTable';
 
+const ProTable = Vue.extend({
+  name: 'ElProTable',
+  extends: ElProTable,
+  props: {
+    // 分页字段映射配置
+    paginationMapping: {
+      type: Object,
+      default: () => ({
+        pageKey: 'page',
+        sizeKey: 'size'
+      })
+    }
+  }
+})
+
+Vue.component('ProTable', ProTable)
+```
+##### columnSettingsConfig
+列设置功能提供了灵活、可配置的表格列管理能力，支持动态显示/隐藏列、列排序、固定列等功能，适用于复杂的数据展示场景。列设置中标题对应 `columnsConfig.label` 字段，显示/隐藏列是 `columnsConfig.prop || columnsConfig.key`。
+<table style="display: table">
+  <tr>
+    <th style="width: 100px">参数</th>
+    <th>说明</th>
+    <th style="width: 200px">类型</th>
+    <th style="width: 80px">默认值</th>
+  </tr>
+  <tr>
+    <td>resetText</td>
+    <td>重置按钮文本</td>
+    <td><code>string</code></td>
+    <td><code>重置</code></td>
+  </tr>
+  <tr>
+    <td>settingText</td>
+    <td>列设置按钮文本</td>
+    <td><code>string</code></td>
+    <td><code>列设置</code></td>
+  </tr>
+  <tr>
+    <td>draggable</td>
+    <td>是否支持拖拽排序</td>
+    <td><code>boolean</code></td>
+    <td><code>true</code></td>
+  </tr>
+  <tr>
+    <td>checkable</td>
+    <td>显示/隐藏列</td>
+    <td><code>boolean</code></td>
+    <td><code>true</code></td>
+  </tr>
+  <tr>
+    <td>persistenceType</td>
+    <td>持久化类型</td>
+    <td><code>sessionStorage | localStorage</code></td>
+    <td>-</td>
+  </tr>
+  <tr>
+    <td>persistenceKey</td>
+    <td>存储的 key，需要确保唯一性</td>
+    <td><code>string</code></td>
+    <td>-</td>
+  </tr>
+</table>
+
+> 重置按钮是重置到组件初始化时绑定的列设置状态，如果没有持久化，则是重置到列定义初始的状态；反之则是持久化状态。
+
+> 拖拽排序遵循的是先排序，后分组，目的是保证列是整体有序的。
+
+举个例子：
+```
+[
+  { label: '标题1', prop: title1, index: 0 }, // 不固定
+  { label: '标题2', prop: title2: index: 1, fixed: 'right' }, // 固定在右侧
+  { label: '标题3', prop: title3, index: 2, fixed: 'left }, // 固定在左侧
+  { label: '标题4', prop: title4: index: 3 } // 不固定
+]
+```
+当拖拽 `prop=title4` 到 `prop="title` 上方的位置时，此时的列设置规则对应如下 
+```
+[
+  { label: '标题4', prop: title4, index: 0 }, // 不固定
+  { label: '标题1', prop: title1: index: 1 } // 不固定
+  { label: '标题2', prop: title2: index: 2, fixed: 'right' }, // 固定在右侧
+  { label: '标题3', prop: title3, index: 3, fixed: 'left }, // 固定在左侧
+]
+```
+可以看到固定列的 `index` 也发生了变化。

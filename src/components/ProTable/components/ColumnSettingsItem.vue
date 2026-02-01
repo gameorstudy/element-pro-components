@@ -1,94 +1,69 @@
 <template>
-  <div v-if="columns.length" class="column-setting-list">
-    <div class="column-setting-list-title">{{ title }}</div>
+  <div v-if="columns.length" class="column-settings-item-list">
+    <div class="title">{{ title }}</div>
     <div ref="dragDropZoneRef" class="drag-drop-zone">
-      <div
-        class="site-tree-list"
+      <div 
+        class="column-settings-item"
         v-for="(column, index) in columns"
-        :class="{
-          'site-tree-list-draggable': draggable,
-          dragging: draggingIndex === index,
-        }"
+        :class="{ draggable, dragging: dragIndex === index}"
         :draggable="draggable"
-        :key="column.prop"
         @dragstart="(e) => onDragstart(e, index)"
         @dragenter.prevent="onDragenter"
         @dragover.prevent="(e) => onDragover(e, index)"
         @dragleave="onDragleave"
         @drop="(e) => onDrop(e, index)"
         @dragend="onDragend"
+        :key="column.prop"  
       >
-        <span v-if="draggable" class="site-tree-draggable-icon">
-          <span class="icon icon-holder">
-            <HolderIcon />
-          </span>
+        <span v-if="draggable" class="icon icon-holder">
+          <HolderIcon />
         </span>
-        <span class="site-tree-switcher"></span>
-        <template v-if="columnSettings.checkable">
-          <el-checkbox
-            :value="column.checked"
-            @change="(checked) => handleChange(checked, column.prop)"
-            :disabled="column.disabled"
-          >
-            <span class="tree-node-content-wrapper">{{ column.label }}</span>
-            <ColumnAlignSettings :column="column" />
-            <!-- 第一个元素头部插入 -->
+        <span class="switcher"></span>
+        <component 
+          :is="dynamicComponent"
+          v-bind="dynamicComponent === 'el-checkbox' 
+            ? { value: column.checkable, disabled: column.disabled } 
+            : { class: 'toggleable-checkbox' }"
+          v-on="dynamicComponent === 'el-checkbox'
+            ? { change: (checked) => handleChange(checked, column.prop) }
+            : {}"
+        >
+          <span class="label">{{ column.label }}</span>
+          <ColumnAlignSettings :column="column" />
+          <!-- 拖拽指示元素 -->
+          <!-- start -->
+            <!-- ::before 伪元素 -->
             <!-- start -->
-            <div
-              v-if="index === 0 && showHeadIndicator"
-              class="site-tree-top-head-indicator"
-            ></div>
+            <div v-if="index === 0 && dropIndex === index" class="indicator head-indicator"></div>
             <!-- end -->
-            <!-- 尾部插入 -->
+            <!-- ::after 伪元素 -->
             <!-- start -->
-            <div
-              v-else-if="droppedIndex === index"
-              class="site-tree-drop-indicator"
-            ></div>
+            <div v-else-if="dropIndex === index + 1" class="indicator tail-indicator"></div>
             <!-- end -->
-          </el-checkbox>
-        </template>
-        <template v-else>
-          <span class="tree-node-algin-wrapper">
-            <span class="tree-node-content-wrapper">{{ column.label }}</span>
-            <ColumnAlignSettings :column="column" />
-            <!-- 第一个元素头部插入 -->
-            <!-- start -->
-            <div
-              v-if="index === 0 && showHeadIndicator"
-              class="site-tree-top-head-indicator"
-            ></div>
-            <!-- end -->
-            <!-- 尾部插入 -->
-            <!-- start -->
-            <div
-              v-else-if="droppedIndex === index"
-              class="site-tree-drop-indicator"
-            ></div>
-            <!-- end -->
-          </span>
-        </template>
+          <!-- end -->
+        </component>
       </div>
     </div>
   </div>
 </template>
 
 <script>
-import HolderIcon from "./svg/HolderIcon.vue";
-import ColumnAlignSettings from "./ColumnAlignSettings.vue";
+import HolderIcon from './svg/HolderIcon.vue'
+import ColumnAlignSettings from './ColumnAlignSettings.vue'
 
 export default {
-  name: "ColumnSettingsItem",
-  inject: ["onColumnSettingsChange"],
+  name: 'ColumnSettingsItem',
   components: {
     HolderIcon,
-    ColumnAlignSettings,
+    ColumnAlignSettings
   },
+  inject: ["onColumnSettingsChange"],
   props: {
-    // 列数据
+    // 列表项
     columns: {
       type: Array,
-      default: () => [],
+      required: true,
+      default: () => []
     },
     // 列设置
     columnSettings: {
@@ -98,29 +73,32 @@ export default {
   computed: {
     // 列类型
     title() {
-      const { columns } = this;
+      const { columns } = this
       if (Array.isArray(columns) && columns.length) {
-        const fixed = columns[0].fixed;
+        const fixed = columns[0].fixed
         return fixed === "left"
           ? "固定在左侧"
           : fixed === "right"
           ? "固定在右侧"
-          : "不固定";
+          : "不固定"
       }
 
-      return "";
+      return ""
     },
-    // 数组长度 > 1 可拖动
+    // columnSettings.draggable && columns.length > 1
     draggable() {
-      return this.columnSettings.draggable && this.columns?.length > 1;
+      return this.columnSettings.draggable && this.columns?.length > 1
+    },
+    // 动态组件
+    dynamicComponent() {
+      return this.columnSettings.checkable ? 'el-checkbox' : 'span'
     },
   },
   data() {
     return {
-      draggingIndex: -1, // 开始拖动目标的下标
-      droppedIndex: -1, // 可释放目标的下标
-      showHeadIndicator: false, // 是否在头节点插入
-    };
+      dragIndex: -1, // 开始拖动目标的下标
+      dropIndex: -1, // 可释放目标的下标
+    }
   },
   methods: {
     /**
@@ -139,38 +117,44 @@ export default {
      */
     getCursorPos(e) {
       // 1. 获取元素的位置和尺寸
-      const rect = e.target.getBoundingClientRect();
+      const rect = e.target.getBoundingClientRect()
 
       // 2. 获取鼠标相对于元素的位置
-      const relativeY = e.clientY - rect.top;
+      const relativeY = e.clientY - rect.top
 
       // 3. 判断光标在释放目标位置的上半还是下半
-      const cursorPos = relativeY < rect.height / 2 ? "top" : "bottom";
+      const cursorPos = relativeY < rect.height / 2 ? "top" : "bottom"
 
       return cursorPos      
     },
     /**
-     * @desc 活动释放目标位置
-     * @param {String} cursorPos top | bottom
-     * @param {String} dragDirection up | down
-     * @param {Number} droppedIndex 释放目标的下标
+     * @desc 获取释放位置下标
+     * @param {Object} e
+     * @param {Number} dropIndex 释放目标的下标
      */
-    getDropPos(cursorPos, dragDirection, droppedIndex) {
-      if (cursorPos === 'top') {
-        if (dragDirection === 'down' && this.draggingIndex === droppedIndex - 1) {
-          // 考虑到向下拖动的上一个位置可能是开始拖动的元素
-          return -1
-        } else {
-          return droppedIndex - 1
-        }
-      } else {
-        if (dragDirection === 'up' && this.draggingIndex === droppedIndex + 1) {
-          // 考虑到向上拖动的下一个位置可能是开始拖动的元素
-          return -1
-        } else {
-          return droppedIndex
-        }
+    getDropIndex(e, dropIndex) {
+      // 获取光标位置
+      const cursorPos = this.getCursorPos(e)
+      
+      // 光标在释放目标位置上半 则在释放目标位置上方插入
+      // 光标在释放目标位置下半 则在释放目标位置下方插入
+      const targetDropIndex = cursorPos === 'top' ? dropIndex : dropIndex + 1
+
+      // 当前拖拽的方向
+      const dragDirection = this.dragIndex < dropIndex ? "down" : "up"
+      
+      // 释放位置 = 开始拖拽位置
+      if (targetDropIndex === this.dragIndex) {
+        return -1
       }
+
+      // 拖拽方向：down && 相邻 则说明位置不变
+      const isNear = Math.abs(targetDropIndex - this.dragIndex) === 1
+      if (isNear && dragDirection === 'down') {
+        return -1
+      }
+
+      return targetDropIndex
     },
     /**
      * @desc 开始拖动
@@ -178,16 +162,16 @@ export default {
      * @param {Number} index 下标
      */
     onDragstart(e, index) {
-      e.dataTransfer.effectAllowed = "move";
-      e.dataTransfer.dropEffect = "move";
-      this.draggingIndex = index;
+      e.dataTransfer.effectAllowed = "move"
+      e.dataTransfer.dropEffect = "move"
+      this.dragIndex = index
     },
     /**
      * @desc 拖入到释放目标
      * @param {Object} e 拖拽元素对象
      */
     onDragenter(e) {
-      if (this.draggingIndex === -1) {
+      if (this.dragIndex === -1) {
         // 其它拖拽区域
         e.dataTransfer.dropEffect = 'none'
       } else {
@@ -197,42 +181,25 @@ export default {
     /**
      * @desc 拖拽到释放目标上
      * @param {Object} e 释放目标对象
-     * @param {Number} droppedIndex 下标
+     * @param {Number} dropIndex 下标
      */
-    onDragover(e, droppedIndex) {
+    onDragover(e, dropIndex) {
       // ***参数是在事件绑定时确定的 而不是在事件触发时***
 
       // 如果拖动到其它列 
-      if (this.draggingIndex === -1) {
+      if (this.dragIndex < 0) {
         e.dataTransfer.dropEffect = 'none'
         return
       }
 
       // 释放目标是开始拖动目标 则退出
-      if (this.draggingIndex === droppedIndex) {
-        this.droppedIndex = -1
-        return;
-      }
-
-      // 获取光标位置
-      const cursorPos = this.getCursorPos(e)
-      
-      // 光标在释放目标位置上半 则在释放目标位置上方插入
-      // 光标在释放目标位置下半 则在释放目标位置下方插入
-      if (cursorPos === 'top' && droppedIndex === 0) {
-        // 这里有点特殊 因为向上拖动且释放元素是下标为 0 时 需要在最上方显示插入标志
-        this.showHeadIndicator = true
-        this.droppedIndex = -1
+      if (this.dragIndex === dropIndex) {
+        this.dropIndex = -1
         return
       }
 
-      // 取消插入到第一个元素的样式
-      this.showHeadIndicator = false
-
-      // 当前拖拽的方向
-      const dragDirection = this.draggingIndex < droppedIndex ? "down" : "up";
-      // 获取释放的位置
-      this.droppedIndex = this.getDropPos(cursorPos, dragDirection, droppedIndex)
+      // 获取释放位置下标
+      this.dropIndex = this.getDropIndex(e, dropIndex)
     },
     /**
      * @desc 离开可释放目标
@@ -244,57 +211,45 @@ export default {
         return
       }
 
-      this.droppedIndex = -1
-      this.showHeadIndicator = false
+      this.dropIndex = -1
     },
     /**
      * @desc 释放目标停止拖拽
      * @param {Object} e 释放目标对象
-     * @param {Number} droppedIndex 释放的下标
+     * @param {Number} dropIndex 释放的下标
      */
-    onDrop(e, droppedIndex) {
-      if (this.draggingIndex === droppedIndex) {
-        this.droppedIndex = -1
-        return;
-      }
-
-      // 获取光标位置
-      const cursorPos = this.getCursorPos(e)
-      if (cursorPos === 'top' && droppedIndex === 0) {
-        // 插入到第一个节点上面
-        const fromProp = this.columns[this.draggingIndex].prop
-        // ProTable provide 提供
-        this.onColumnSettingsChange({ event: 'drop', fromProp });
+    onDrop(e, dropIndex) {
+      if (this.dragIndex === dropIndex) {
+        this.dropIndex = -1
         return
       }
 
-      // 当前拖拽的方向
-      const dragDirection = this.draggingIndex < droppedIndex ? "down" : "up";
-      // 实际释放的位置
-      const actualDroppedIndex = this.getDropPos(cursorPos, dragDirection, droppedIndex)
-      // 开始拖动元素插入实际释放的位置下面 && 二者不能相同
-      if (actualDroppedIndex !== -1) {
-        const fromProp = this.columns[this.draggingIndex].prop
-        const toProp = this.columns[this.droppedIndex].prop
+      // 获取释放位置下标
+      const index = this.getDropIndex(e, dropIndex)
+      if (index > -1) {
+        const { columns } = this
+        const fromProp = columns[this.dragIndex].prop
+        // 要判断是否拖拽到最后一列
+        const isAfter = index === this.columns.length
+        const toProp = isAfter ? columns[index - 1].prop : columns[index].prop
         // ProTable provide 提供
-        this.onColumnSettingsChange({ event: 'drop', fromProp, toProp })
+        this.onColumnSettingsChange({ event: 'drop', fromProp, toProp, isAfter })
       }
     },
     /**
-     * @desc 结束拖动
+     * @desc 结束拖拽
      */
     onDragend() {
       // 重置
-      this.draggingIndex = -1
-      this.droppedIndex = -1
-      this.showHeadIndicator = false
+      this.dragIndex = -1
+      this.dropIndex = -1
     }
-  },
-};
+  }
+}
 </script>
 
-<style>
-.column-setting-popover .column-setting-list-title {
+<style scoped>
+.column-settings-item-list > .title {
   margin-block-start: 6px;
   margin-block-end: 6px;
   padding-inline-start: 24px;
@@ -302,7 +257,11 @@ export default {
   font-size: 12px;
 }
 
-.column-setting-popover .site-tree-list {
+.column-settings-item-list .el-checkbox-group {
+  font-size: unset;
+}
+
+.column-settings-item {
   display: flex;
   align-items: center;
   padding: 0 0 4px 0;
@@ -310,15 +269,24 @@ export default {
   color: rgba(42, 46, 54, 0.88);
 }
 
-.column-setting-popover .site-tree-list-draggable {
+.column-settings-item:hover /deep/ .el-checkbox__label, 
+.column-settings-item:hover .toggleable-checkbox {
+  background: rgba(42, 46, 54, 0.04);
+}
+
+.column-settings-item:hover .icon-algin-group {
+  display: inline-flex;
+}
+
+.column-settings-item.draggable {
   cursor: grab;
 }
 
-.column-setting-popover .dragging {
+.column-settings-item.dragging {
   position: relative;
 }
 
-.column-setting-popover .dragging::after {
+.column-settings-item.dragging::after {
   position: absolute;
   top: 0;
   inset-inline-end: 0;
@@ -326,7 +294,7 @@ export default {
   inset-inline-start: 0;
   border: 1px solid #1677ff;
   opacity: 0;
-  animation-name: show;
+  animation-name: fade;
   animation-duration: 0.3s;
   animation-play-state: running;
   animation-fill-mode: forwards;
@@ -334,113 +302,7 @@ export default {
   pointer-events: none;
 }
 
-.column-setting-popover .dragging .el-checkbox__label,
-.column-setting-popover .dragging .tree-node-algin-wrapper {
-  background: #e3f0ff;
-}
-
-.column-setting-popover .site-tree-draggable-icon {
-  flex-shrink: 0;
-  width: 24px;
-  line-height: 24px;
-  text-align: center;
-  visibility: visible;
-  opacity: 0.2;
-  transition: opacity 0.3s;
-}
-
-.column-setting-popover .icon-holder {
-  display: inline-flex;
-  align-items: center;
-  color: inherit;
-  font-style: normal;
-  line-height: 0;
-  text-align: center;
-  text-transform: none;
-  vertical-align: -0.125em;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-}
-
-.column-setting-popover .site-tree-switcher {
-  position: relative;
-  flex: none;
-  align-self: stretch;
-  width: 24px;
-  margin: 0;
-  line-height: 24px;
-  text-align: center;
-  cursor: unset;
-  user-select: none;
-  transition: all 0.3s;
-  border-radius: 6px;
-}
-
-.column-setting-popover .site-tree-list .tree-node-algin-wrapper {
-  width: 100%;
-  display: inline-block;
-}
-
-.column-setting-popover .site-tree-list .el-checkbox {
-  flex: 1;
-}
-
-.column-setting-popover .site-tree-list .el-checkbox__label {
-  width: calc(100% - 18px);
-}
-
-.column-setting-popover .site-tree-list .el-checkbox__label,
-.column-setting-popover .site-tree-list .tree-node-algin-wrapper {
-  line-height: 24px;
-  padding-left: 0;
-  margin-left: 4px;
-  padding: 0 4px;
-  border-radius: 6px;
-  box-sizing: border-box;
-  transition: background-color 0.2s;
-  position: relative;
-}
-
-.column-setting-popover .site-tree-list .el-checkbox__label:hover,
-.column-setting-popover .site-tree-list .tree-node-algin-wrapper:hover {
-  background-color: rgba(42, 46, 54, 0.04);
-}
-
-.column-setting-popover .site-tree-list .icon-group {
-  float: right;
-  height: 24px;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.column-setting-popover .site-tree-list .icon-vertical-align {
-  font-size: 14px;
-  color: #1677ff;
-  cursor: pointer;
-  display: none;
-  transition: display 0.2s;
-}
-
-.column-setting-popover .site-tree-list:hover .icon-vertical-align {
-  display: inline-flex;
-}
-
-.column-setting-popover .site-tree-list:hover .icon-vertical-align svg {
-  outline: none;
-}
-
-.column-setting-popover .tree-node-content-wrapper {
-  display: inline-flex;
-  max-width: 80px;
-  text-overflow: ellipsis;
-  overflow: hidden;
-  word-break: break-all;
-  white-space: nowrap;
-}
-
-.column-setting-popover .site-tree-drop-indicator,
-.column-setting-popover .site-tree-top-head-indicator {
+.column-settings-item .indicator {
   width: calc(100% - 4px);
   height: 2px;
   background-color: #1677ff;
@@ -451,12 +313,12 @@ export default {
   bottom: -3px;
 }
 
-.column-setting-popover .site-tree-top-head-indicator {
+.column-settings-item .indicator.head-indicator {
   top: 0;
 }
 
-.column-setting-popover .site-tree-top-head-indicator::before,
-.column-setting-popover .site-tree-drop-indicator::after {
+.column-settings-item .indicator::before,
+.column-settings-item .indicator::after {
   position: absolute;
   left: 0;
   top: -3px;
@@ -470,7 +332,65 @@ export default {
   box-sizing: border-box;
 }
 
-@keyframes show {
+.column-settings-item .icon-holder {
+  flex-shrink: 0;
+  width: 24px;
+  line-height: 24px;
+  text-align: center;
+  visibility: visible;
+  opacity: 0.2;
+  transition: opacity 0.3s;
+}
+
+.column-settings-item .switcher {
+  flex: none;
+  align-self: stretch;
+  width: 24px;
+  margin: 0;
+  line-height: 24px;
+  text-align: center;
+  cursor: unset;
+  user-select: none;
+  transition: all 0.3s;
+  border-radius: 6px;
+}
+
+.column-settings-item /deep/ .el-checkbox,
+.column-settings-item .toggleable-checkbox {
+  flex: 1;
+}
+
+.column-settings-item .toggleable-checkbox,
+.column-settings-item /deep/ .el-checkbox__label {
+  display: inline-flex;
+  padding-left: 0;
+  padding: 0 4px;
+  line-height: 24px;
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: background-color 0.2s;
+  position: relative;
+}
+
+.column-settings-item /deep/ .el-checkbox__label {
+  width: calc(100% - 18px);
+  margin-left: 4px;
+}
+
+.column-settings-item /deep/ .label {
+  display: inline-block;
+  max-width: 80px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  word-break: break-all;
+  white-space: nowrap;
+}
+
+.column-settings-item /deep/ .label:empty::before {
+  content: '\00a0';
+}
+
+@keyframes fade {
   0% {
     opacity: 0;
   }

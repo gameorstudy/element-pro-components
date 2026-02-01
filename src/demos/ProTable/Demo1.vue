@@ -24,9 +24,17 @@
           <li>ProTable.tableEvents</li>
           <li>ProTable.columns</li>
           <li>ProTable.paginationProps</li>
+          <li>ProTable.paginationMapping</li>
           <li>ProTable.initialValues</li>
           <li>ProTable.defaultSize</li>
           <li>ProTable.manualRequest</li>
+          <li>ProTable.columnSettings = false</li>
+          <li>ProTable.columnSettings.resetText</li>
+          <li>ProTable.columnSettings.settingText</li>
+          <li>ProTable.columnSettings.draggable</li>
+          <li>ProTable.columnSettings.checkable</li>
+          <li>ProTable.columnSettings.persistenceType</li>
+          <li>ProTable.columnSettings.persistenceKey</li>
           <li>ProTableEvents.onParams</li>
           <li>ProTableEvents.onSubmit</li>
           <li>ProTableEvents.onReset</li>
@@ -62,12 +70,11 @@
           :columns="columns"
           :paginationProps="{
             'page-sizes': [10, 20],
-            pageKey: 'page',
-            sizeKey: 'size'
           }"
           :initialValues="initialValues"
           defaultSize="small"
           :manualRequest="true"
+          :columnSettings="true"
           @onParams="onParams"
           @onSubmit="onSubmit"
           @onReset="onReset"
@@ -92,8 +99,10 @@
           <!-- end -->
           <!-- 标题栏 -->
           <!-- start -->
-          <el-button type="primary" @click="collapsed = !collapsed">手动展开、收起</el-button>
-          <el-button type="primary" @click="reload">手动刷新</el-button>
+          <span>
+            <el-button type="primary" @click="collapsed = !collapsed">手动展开、收起</el-button>
+            <el-button type="primary" @click="reload">手动刷新</el-button>
+          </span>
           <!-- end -->
         </ProTable>
       </el-col>
@@ -117,6 +126,8 @@
           {
             width: 60,
             type: 'selection',
+            key: 'selection',
+            disabled: true
           },
           {
             label: '标题1',
@@ -251,11 +262,11 @@
           title7: `数据7-${index}`,
           title8: `数据8-${index}`,
         }))
-        const { page, size } = params
+        const { pageNum, pageSize } = params
         this.loading = true
         setTimeout(() => {
           this.loading = false
-          this.dataSource = data.slice((page - 1) * size, page * size)
+          this.dataSource = data.slice((pageNum - 1) * pageSize, pageNum * pageSize)
           this.total = TOTAL_RECORDS
         }, 1000)
       },

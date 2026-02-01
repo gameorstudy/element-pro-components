@@ -59,8 +59,14 @@
     <!-- end -->
     <!-- 标题栏 -->
     <!-- start -->
-    <div v-if="$slots.default" class="pro-table__toolbar">
+    <div v-if="$slots.default || columnSettings" class="pro-table__toolbar">
       <slot></slot>
+      <!-- 列设置 -->
+      <!-- start -->
+      <div v-if="columnSettings" class="pro-table__toolbar-items">
+        <ColumnSettings :columns="settingColumns" :columnSettings="initializedColumnSettings" />
+      </div>
+      <!-- end -->
     </div>
     <!-- end -->
     <el-table
@@ -109,11 +115,7 @@
     </el-table>
     <el-pagination
       class="pro-table__pagination"
-      v-bind="{
-        ...initializedPaginationProps,
-        pageKey: undefined,
-        sizeKey: undefined,
-      }"
+      v-bind="initializedPaginationProps"
       @current-change="handleCurrentChange"
       @size-change="handleSizeChange"
     />
@@ -124,9 +126,12 @@
   import { setPlaceholder, setSelectOptions, setCascaderOptions } from '@/utils/form'
   import { defaultColConfig, BREAKPOINT_ORDER, GRID_COLUMNS, calculateCurrentSpan } from "@/utils/breakpoints"
   import { debounce } from "@/utils/debounce"
+  import { validatePersistenceConfig } from '@/utils/validate'
+  import { generateCryptoUID } from '@/utils/uid'
   import ProFormItem from '@/components/ProFormItem'
   import ArrowIcon from "./components/svg/ArrowIcon.vue"
   import CustomRender from '@/components/CustomRender'
+  import ColumnSettings from './components/ColumnSettings.vue'
 
   export default {
     name: 'ProTable',
@@ -134,6 +139,17 @@
       ProFormItem,
       CustomRender,
       ArrowIcon,
+      ColumnSettings
+    },
+    provide() {
+      if (!this.columnSettings) {
+        return
+      }
+
+      return {
+        // 监听列设置修改
+        onColumnSettingsChange: this.onColumnSettingsChange,
+      };
     },
     props: {
       // 搜索表单
@@ -181,6 +197,11 @@
       },
       // el-pagination attributes 的配置
       paginationProps: {
+        type: Object,
+        default: () => ({})
+      },
+      // 分页参数字段映射配置
+      paginationMapping: {
         type: Object,
         default: () => ({})
       },
@@ -291,8 +312,8 @@
       },
       // 标准化列定义配置
       normalizedColumns() {
-        const { columns } = this
-        return columns
+        const { columns, initializedColumnSettings, columnSettingsRule } = this
+        let normalizedColumns = columns
           // 筛选隐藏项
           .filter(item => !item.hideInTable)
           .map((col) => {
@@ -321,10 +342,116 @@
                 valueEnum,
                 renderCellHeader,
                 renderCell,
-                key
+                key,
+                disabled
               }
             }
           })
+
+        // 列设置处理
+        const { draggable, checkable } = initializedColumnSettings
+  
+        // 合并列设置规则
+        if (initializedColumnSettings && columnSettingsRule?.length) {
+          normalizedColumns = normalizedColumns.map(col => {
+            const rule = columnSettingsRule.find(item => (col.prop || col.nonElColumnProps.key) === item.prop)
+            if (rule) {
+              const { checkable, fixed, index } = rule
+              col.nonElColumnProps = {
+                ...col.nonElColumnProps,
+                checkable,
+                index
+              }
+              return { ...col, fixed }
+            }
+
+            return col
+          })
+        }
+
+        // 支持拖拽排序
+        if (draggable) {
+          normalizedColumns.sort((a, b) => a.nonElColumnProps.index - b.nonElColumnProps.index)
+        }
+
+        // 支持显示/隐藏列
+        if (checkable) {
+          normalizedColumns = normalizedColumns.filter(item => item.nonElColumnProps.checkable)
+        } 
+
+        return normalizedColumns
+      },
+      // 列设置的列表项
+      settingColumns() {
+        const { columnSettings } = this
+        if (!columnSettings) {
+          return []
+        }
+        const { columnSettingsRule, columns } = this
+
+        return columnSettingsRule.map((rule, index) => {
+            const col = columns.find(item => rule.prop === (item.prop || item.key))
+            if (col) {
+              const { label, disabled } = col
+              return { ...rule, label, disabled }
+            }
+
+            return rule
+          })
+      },
+      // 是否持久化
+      isValidPersistence() {
+        const { columnSettings } = this
+        if (typeof columnSettings !== 'object') {
+          return false
+        }
+
+        const { persistenceType, persistenceKey } = columnSettings
+        return validatePersistenceConfig(persistenceType, persistenceKey)
+      },
+      // columnSettings 初始化
+      initializedColumnSettings() {
+        const { columnSettings } = this
+        if (columnSettings) {
+          const defaultColumnSettings = {
+            resetText: '重置',
+            settingText: '列设置',
+            draggable: true,
+            checkable: true
+          }
+
+          // 如果不是对象，返回默认值
+          if (typeof columnSettings !== 'object') {
+            return defaultColumnSettings
+          }
+
+           const { persistenceType, persistenceKey, ...restSettings } = columnSettings
+  
+          // 合并基本设置
+          const baseSettings = {
+            ...defaultColumnSettings,
+            ...restSettings
+          }
+
+          // 如果没有持久化配置，直接返回
+          if (!persistenceType) {
+            return baseSettings
+          }
+
+
+          // 获取持久化
+          if (this.isValidPersistence) {
+            return {
+              ...baseSettings,
+              persistenceType,
+              persistenceKey
+            }
+          }
+
+          return baseSettings
+        }
+
+        return false
       },
       // tableProps 初始化
       initializedTableProps() {
@@ -366,6 +493,7 @@
         tableKey: 1, // table key
         pageNum: 1, // 页码
         pageSize: this.paginationProps["page-size"] || 10, // 页数
+        columnSettingsRule: [], // 列设置规则
       }
     },
     watch: {
@@ -390,6 +518,13 @@
       // 是否手动执行
       if (!this.manualRequest) {
         this.handleSearch();
+      }
+      // 开启列设置
+      if (this.columnSettings) {
+        const data = this.initializeColumnSettingsRule()
+        this.columnSettingsRule = data
+        // 存储副本（防止对象引用）
+        this.resetRules = JSON.parse(JSON.stringify(data))
       }
     },
     mounted() {
@@ -530,7 +665,7 @@
        * @desc 表单请求参数（分页）
        */
       getParams() {
-        const { pageNum, pageSize, paginationProps: { pageKey, sizeKey } } = this
+        const { pageNum, pageSize, paginationMapping: { pageKey, sizeKey } } = this
         return {
           ...this.form,
           [pageKey || "pageNum"]: pageNum,
@@ -597,6 +732,171 @@
 
         this.$emit("onParams", this.getParams())
       },
+      /**
+       * @desc 初始化列设置
+       */
+      initializeColumnSettingsRule() {
+        const { persistenceType, persistenceKey } = this.columnSettings
+        
+        // 从缓存读取
+        if (this.isValidPersistence) {
+          const data = JSON.parse(window[persistenceType]?.getItem(persistenceKey))
+          if (Array.isArray(data)) {
+            return data
+          }
+        }
+
+        // Columns 渲染生成
+        return this.columns
+          // 过滤隐藏的 && (columnConfig.prop || columnConfig.key)
+          .filter((item) => !item.hideInTable && (item.prop || item.key))
+          .map((col, index) => {
+            const { prop, key, fixed } = col;
+            return {
+              prop: prop || key,
+              fixed,
+              checkable: true,
+              index,
+            }
+          })
+      },
+      /**
+       * @desc 全选、取消全选
+       * @param {Boolean} checked 勾选状态
+       */
+      checkAllRule(checked) {
+        this.columnSettingsRule = this.columnSettingsRule.map(rule => {
+          const col = this.columns.find(item => (item.prop || item.key) === rule.prop )
+          if (col) {
+            return { ...rule, checkable: !col.disabled ? checked : rule.checkable }
+          }
+
+          return rule
+        })
+      },
+      /**
+       * @desc 单个勾选、取消勾选
+       * @param {String} prop 标识
+       * @param {Boolean} checked 勾选状态
+       */
+      checkRule(prop, checked) {
+        const { columnSettingsRule } = this
+        const index = columnSettingsRule.findIndex((item) => item.prop === prop)
+        if (index !== -1) {
+          columnSettingsRule.splice(index, 1, {
+            ...columnSettingsRule[index],
+            checkable: checked,
+          })
+        }
+      },
+      /**
+       * @desc 固定位置修改
+       * @param {String} prop 属性
+       * @param {String | undefined} fixed 固定位置
+       */
+      handleAlignRule(prop, fixed) {
+        const { columnSettingsRule } = this
+        const index = columnSettingsRule.findIndex((item) => item.prop === prop)
+        if (index !== -1) {
+          const rule = columnSettingsRule[index]
+          columnSettingsRule.splice(index, 1, { ...rule, fixed })
+        }
+      },
+      /**
+       * @desc 重置列设置规则
+       */
+      handleResetRule() {
+        // 回溯到初始化的副本（防止引用）
+        this.columnSettingsRule = JSON.parse(JSON.stringify(this.resetRules))
+      },
+      /**
+       * @desc 拖拽更新
+       * @param {String} fromProp 拖拽开始列
+       * @param {String} toProp 释放目标列
+       * @param {Boolean} isAfter 是否拖拽到分组的最后一列
+       */
+      handleDropRule(fromProp, toProp, isAfter = false) {
+        const { columnSettingsRule } = this
+        const fromIndex = columnSettingsRule.findIndex(item => (item.prop || item.key) === fromProp)
+        if (fromIndex === -1) {
+          return
+        }
+        const toIndex = columnSettingsRule.findIndex(item => (item.prop || item.key) === toProp)
+        if (toIndex === -1) {
+          return
+        }
+        // 向上拖拽
+        const isUp = fromIndex > toIndex
+        // 开始移动下标
+        const startIndex = isUp ? toIndex : fromIndex + 1
+        // 结束移动下标
+        const endIndex = isUp ? fromIndex : isAfter ? toIndex + 1 : toIndex
+        // 移动
+        for (let i = startIndex; i < endIndex; ++i) {
+          const column = columnSettingsRule[i]
+          columnSettingsRule.splice(i, 1, { ...column, index: isUp ? column.index + 1 : column.index - 1 })
+        }
+
+        const fromColumn = columnSettingsRule[fromIndex]
+        if (isUp) {
+          // 先删除 后插入
+          columnSettingsRule.splice(fromIndex, 1)
+          columnSettingsRule.splice(toIndex, 0, { ...fromColumn, index: toIndex })
+        } else {
+          // 先插入 后删除
+          columnSettingsRule.splice(toIndex, 0 , { ...fromColumn, index: toIndex })
+          columnSettingsRule.splice(fromIndex, 1)
+        }
+      },
+      /**
+       * @desc el-table 列的数量发生变化时需要重新布局
+       */
+      doLayout() {
+        this.$nextTick(() => {
+          // 对 Table 进行重新布局
+          this.$refs.tableRef?.doLayout()
+        })
+      },
+      /**
+       * @desc 监听列设置修改
+       * @param { Object } data 数据
+       * @param {String} data.event 事件类型
+       */
+      onColumnSettingsChange(data) {
+        const { event, prop, checked, fixed, fromProp, toProp, isAfter } = data;
+        // 勾选或取消勾选
+        switch (event) {
+          case "checkAll":
+            this.checkAllRule(checked)
+            this.doLayout()
+            break
+          case "check":
+            this.checkRule(prop, checked)
+            this.doLayout()
+            break
+          case "align":
+            this.handleAlignRule(prop, fixed)
+            break
+          case "reset":
+            this.handleResetRule()
+            this.doLayout()
+            break
+          case 'drop':
+            this.handleDropRule(fromProp, toProp, isAfter)
+            // 更新 table key
+            this.tableKey = generateCryptoUID()
+            this.doLayout()
+            break
+          default:
+            break
+        }
+
+        // 持久化
+        if (this.isValidPersistence) {
+          const { persistenceType, persistenceKey } = this.initializedColumnSettings
+          window[persistenceType].setItem(persistenceKey, JSON.stringify(this.columnSettingsRule))
+        }
+      },
     },
     beforeDestroy() {
       // 清除 resize
@@ -631,8 +931,15 @@
 
 .pro-table__toolbar {
   display: flex;
-  /* justify-content: space-between; */
+  justify-content: space-between;
   padding-bottom: 16px;
+}
+
+.pro-table__toolbar-items {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-left: auto;
 }
 
 .pro-table__pagination {
