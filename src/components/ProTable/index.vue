@@ -517,7 +517,7 @@
       this.getOptions()
       // 是否手动执行
       if (!this.manualRequest) {
-        this.handleSearch();
+        this.handleSearch()
       }
       // 开启列设置
       if (this.columnSettings) {
@@ -590,56 +590,53 @@
        */
       isResponsive() {
         const { searchProps: { colProps } } = this;
-        const keys = Object.keys(colProps);
+        const keys = Object.keys(colProps)
         return keys.some((key) => BREAKPOINT_ORDER.includes(key))
       },
       /**
-       * @desc 计算搜索区域是否需要展开、收起或显示的位置
+       * @desc 计算搜索区域的布局配置（展开/收起状态）
        * @param {boolean} isResponsive 是否是响应式
        */
       calculateSearchLayout(isResponsive = false) {
         const { searchProps: { colProps, defaultExpandedRows }, totalSearchCount } = this
-        if (isResponsive) {
-          // 缓存一栏占的 span
-          this.cachedSpanPerField = calculateCurrentSpan(colProps)
-        } else {
-          // 缓存一栏占的 span
-          this.cachedSpanPerField = colProps.span || 8
-        }
 
-        // 计算最大展示的表单个数
-        const maxSearchCount = (GRID_COLUMNS / this.cachedSpanPerField) * defaultExpandedRows - 1
+        // 1. 计算每个表单项所占的栅格跨度
+        this.cachedSpanPerField = isResponsive 
+          ? calculateCurrentSpan(colProps) 
+          : (colProps.span || 8)
 
-        // 计算是否需要展开、收起
-        this.showExpandToggle = totalSearchCount > maxSearchCount
+        // 2. 计算最大可展示的表单项数量
+        this.maxVisibleFields = Math.floor(
+          (GRID_COLUMNS / this.cachedSpanPerField) * defaultExpandedRows
+        ) - 1
+
+        // 3. 判断是否需要显示展开/收起按钮
+        this.showExpandToggle = totalSearchCount > this.maxVisibleFields
 
         if (this.showExpandToggle) {
-          // 当前是否展开
           this.collapsed = this.searchProps.collapsed
-
-          // 缓存收起的的表单个数
-          this.cachedSearchCount = maxSearchCount
         }
-
-        // 更新展开、收起的位置
+        
+        // 4. 更新布局配置
         this.updateSearchLayout()
       },
       /**
-       * @desc 更新展开、收起的位置
+       * @desc 更新搜索按钮的位置
        */
       updateSearchLayout() {
-        const { searchProps: { colProps } } = this
-        // 判断展开、收起的表单个数
-        if (this.showExpandToggle && this.collapsed) {
-          this.searchCount = this.cachedSearchCount
-        } else {
-          this.searchCount = this.totalSearchCount
-        }
+        const { searchProps: { colProps }, cachedSpanPerField } = this
 
-        // 计算展开、收起的剩余空间
-        const restSpan = GRID_COLUMNS - ((this.cachedSpanPerField * this.searchCount) % GRID_COLUMNS)
-        // 计算偏差值 offset
-        const offset = restSpan - this.cachedSpanPerField
+        // 1. 计算可见的表单项数量
+        this.searchCount = this.showExpandToggle && this.collapsed
+          ? this.maxVisibleFields
+          : this.totalSearchCount
+
+        // 2. 计算搜索按钮的位置
+        const restSpan = GRID_COLUMNS - ((cachedSpanPerField * this.searchCount) % GRID_COLUMNS)
+
+        // 3. 计算偏差值 offset
+        const offset = restSpan - cachedSpanPerField
+
         this.searchColConfig = { ...colProps, offset }
       },
       /**
