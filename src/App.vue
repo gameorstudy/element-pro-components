@@ -5,7 +5,7 @@
 </template>
 
 <script>
-import Demo from '@/demos/ProTable/Demo1.vue'
+import Demo from '@/demos/EditableProTable/Demo1.vue'
 export default {
   name: 'App',
   components: {

@@ -45,6 +45,8 @@ import {
 
   // 弹框组件
   Dialog,
+
+  Message,
 } from 'element-ui'
 
 // 注册指令
@@ -80,3 +82,5 @@ Vue.use(Pagination)
 Vue.use(Tooltip)
 Vue.use(Popover)
 Vue.use(Dialog)
+
+Vue.prototype.$message = Message

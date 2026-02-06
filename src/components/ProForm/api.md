@@ -85,7 +85,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>onFinish</td>
     <td>提交表单且数据验证成功后回调事件</td>
     <td>
-      <code>(values)=>Promise&lt;void&gt; | void</code>
+      <code>(values) => Promise&lt;void&gt; | void</code>
     </td>
     <td>-</td>
   </tr>
@@ -93,7 +93,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>onError</td>
     <td>提交表单数据验证失败后的回调事件</td>
     <td>
-      <code>(error)=>void</code>
+      <code>(error) => void</code>
     </td>
     <td>-</td>
   </tr>
@@ -101,7 +101,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>onReset</td>
     <td>点击重置按钮的回调，此时数据已重置完成</td>
     <td>
-      <code>()=>void</code>
+      <code>() => void</code>
     </td>
     <td>-</td>
   </tr>
@@ -119,7 +119,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>getFormRef</td>
     <td>获取组件内 el-form 的 ref</td>
     <td>
-      <code>()=>Ref</code>
+      <code>() => ref</code>
     </td>
     <td>-</td>
   </tr>
@@ -127,7 +127,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>getForm</td>
     <td>获取表单数据</td>
     <td>
-      <code>(values)=>Promise&lt;void&gt; | void</code>
+      <code>(values) => Promise&lt;void&gt; | void</code>
     </td>
     <td>-</td>
   </tr>
@@ -135,7 +135,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>setFieldsValue</td>
     <td>手动更新表单数据</td>
     <td>
-      <code>(values)=>void</code>
+      <code>(values) => void</code>
     </td>
     <td>-</td>
   </tr>
@@ -143,7 +143,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>setFieldValue</td>
     <td>手动更新单个字段数据</td>
     <td>
-      <code>(key,value)=>void</code>
+      <code>(key, value) => void</code>
     </td>
     <td>-</td>
   </tr>
@@ -151,7 +151,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>submit</td>
     <td>手动提交表单</td>
     <td>
-      <code>()=>void</code>
+      <code>() => void</code>
     </td>
     <td>-</td>
   </tr>
@@ -159,7 +159,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>reset</td>
     <td>手动重置表单</td>
     <td>
-      <code>()=>void</code>
+      <code>() => void</code>
     </td>
     <td>-</td>
   </tr>
@@ -167,7 +167,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>resetAllFields</td>
     <td>重置表单的拓展方法，过滤了非表单项的字段</td>
     <td>
-      <code>()=>void</code>
+      <code>() => void</code>
     </td>
     <td>-</td>
   </tr>
@@ -226,7 +226,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>optionLoader</td>
     <td>异步生成 选择器、级联选择器 下拉数据</td>
     <td>
-      <code>()=>Promise&lt;any&gt;</code>
+      <code>() => Promise&lt;any&gt;</code>
     </td>
     <td>-</td>
   </tr>
@@ -266,7 +266,7 @@ ProForm 在 el-form 上进行了一层封装，支持了一些预设。
     <td>renderLabel</td>
     <td>自定义 <code>el-form-item</code> 的 <code>label</code></td>
     <td>
-      <code>()=>jsx</code>
+      <code>() => jsx</code>
     </td>
     <td>-</td>
   </tr>
@@ -335,7 +335,7 @@ submitter 设置 `false` 会隐藏默认的提交按钮。
     <td>render</td>
     <td>自定义渲染</td>
     <td>
-      <code>false | (form,action,doms)=>jsx</code>
+      <code>false | (form, action, doms) => jsx[]</code>
     </td>
     <td>-</td>
   </tr>

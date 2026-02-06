@@ -3,7 +3,7 @@ ProTable 的诞生是为了解决项目中需要写很多 table 的样板代码�
 以下是几个设计思路：
 1. 列定义包含表格和表单，方便管理；
 2. 表格自定义标题、内容使用 `jsx`，使代码结构更清晰；
-3. 支持列设置，增加表格功能。
+3. 支持列设置，增强表格功能。
 
 ![Template](../ProTable/assets/template.png "template")
 <font color="#f56c6c">图片来源 antd pro table</font>
@@ -126,25 +126,25 @@ ProTable 在 el-table 和 el-form 上进行了一层封装，支持了一些预�
   <tr>
     <td>onParams</td>
     <td><code>查询</code>、<code>重置</code>、<code>分页</code>、<code>排序</code> 触发，获取到参数</td>
-    <td><code>(params)=>Promise&lt;void&gt; | void</code></td>
+    <td><code>(params) => Promise&lt;void&gt; | void</code></td>
     <td>-</td>
   </tr>
   <tr>
     <td>onSubmit</td>
     <td>提交表单时触发</td>
-    <td><code>(params)=>void</code></td>
+    <td><code>(params) => void</code></td>
     <td>-</td>
   </tr>
   <tr>
     <td>onReset</td>
     <td>重置表单时触发</td>
-    <td><code>()=>void</code></td>
+    <td><code>() => void</code></td>
     <td>-</td>
   </tr>
   <tr>
     <td>onCollapse</td>
     <td>展开、收起搜索表单</td>
-    <td><code>(collapsed: boolean)=>void</code></td>
+    <td><code>(collapsed: boolean) => void</code></td>
     <td>-</td>
   </tr>
 </table>
@@ -160,7 +160,13 @@ ProTable 在 el-table 和 el-form 上进行了一层封装，支持了一些预�
   <tr>
     <td>reload</td>
     <td>刷新，接收一个参数：是否重置页码，<code>resetPageIndex</code> 默认 <code>true</code></td>
-    <td><code>(resetPageIndex: boolean)=>void</code></td>
+    <td><code>(resetPageIndex: boolean) => void</code></td>
+    <td>-</td>
+  </tr>
+  <tr>
+    <td>getTableRef</td>
+    <td>获取 el-table 的 ref</td>
+    <td><code>() => ref</code></td>
     <td>-</td>
   </tr>
 </table>
@@ -294,13 +300,13 @@ const defaultColConfig = {
   <tr>
     <td>renderCellHeader</td>
     <td>自定义表格标题</td>
-    <td><code>()=>jsx</code></td>
+    <td><code>() => jsx</code></td>
     <td>-</td>
   </tr>
   <tr>
     <td>renderCell</td>
     <td>自定义表格内容</td>
-    <td><code>(scope)=>jsx</code></td>
+    <td><code>(scope) => jsx | jsx[]</code></td>
     <td>-</td>
   </tr>
   <tr>
@@ -321,7 +327,7 @@ const defaultColConfig = {
 
 > `valueType` 设置为 `option` 表示操作栏，可以不指定。
 
-> ProForm formItemsConfig 中 `hideInForm` 属性不生效。如果要隐藏表单项，请使用 `hideInSearch` 属性。
+> ProForm formItemsConfig 中 `hideInForm` 属性不再支持。如果要隐藏表单搜索项，请使用 `hideInSearch` 属性。
 
 > ProForm formItemsConfig 中 `colProps` 属性和 `slot` 基于组件设计不再支持。
 

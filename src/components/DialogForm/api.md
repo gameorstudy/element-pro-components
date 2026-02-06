@@ -114,7 +114,7 @@ submitter 设置 `false` 会隐藏默认的提交按钮。
     <td>render</td>
     <td>自定义渲染</td>
     <td>
-      <code>false | (form,action,doms)=>jsx</code>
+      <code>false | (form , action, doms) => jsx[]</code>
     </td>
     <td>-</td>
   </tr>

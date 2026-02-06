@@ -214,7 +214,7 @@
       defaultSize: {
         type: String,
         validator: function (value) {
-          return ['medium', 'small', 'mini'].includes(value);
+          return ['medium', 'small', 'mini'].includes(value)
         },
       },
       // 是否需要手动触发首次请求
@@ -231,7 +231,7 @@
     computed: {
       // search 初始化
       searchProps() {
-        const { search } = this;
+        const { search } = this
         if (search) {
           const defaultSearch = {
             searchText: "查询",
@@ -262,7 +262,7 @@
       },
       // 表单项
       formItems() {
-        const { columns } = this;
+        const { columns } = this
         return (
           columns
             // 过滤 隐藏的 & 无表单类型的 & 操作栏
@@ -280,19 +280,19 @@
                 fieldEvents,
                 initialValue,
                 renderLabel,
-              } = col;
+              } = col
               // 设置 el-form-item
-              formItemProps.label = formItemProps.label || label;
-              formItemProps.prop = formItemProps.prop || prop;
+              formItemProps.label = formItemProps.label || label
+              formItemProps.prop = formItemProps.prop || prop
 
               // 设置 placeholder
-              setPlaceholder(fieldProps, valueType);
+              setPlaceholder(fieldProps, valueType)
 
               // 设置 select options
-              setSelectOptions(col, this.cachedOptions);
+              setSelectOptions(col, this.cachedOptions)
 
               // 设置 cascader options
-              setCascaderOptions(fieldProps, col, this.cachedOptions);
+              setCascaderOptions(fieldProps, col, this.cachedOptions)
 
               return {
                 ...formItemProps,
@@ -302,9 +302,9 @@
                 options: col.options,
                 initialValue,
                 renderLabel,
-              };
+              }
             })
-        );
+        )
       },
       // 表单项总个数
       totalSearchCount() {
@@ -728,6 +728,12 @@
         this.pageNum = 1
 
         this.$emit("onParams", this.getParams())
+      },
+      /**
+       * @desc 获取 table ref
+       */
+      getTableRef() {
+        return this.$refs.tableRef
       },
       /**
        * @desc 初始化列设置

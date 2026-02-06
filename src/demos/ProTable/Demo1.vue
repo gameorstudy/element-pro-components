@@ -40,6 +40,7 @@
           <li>ProTableEvents.onReset</li>
           <li>ProTableEvents.onCollapse</li>
           <li>ProTableMethods.reload</li>
+          <li>ProTableMethods.getTableRef</li>
           <li>标题栏 slot</li>
           <li>columnsConfig.formItemProps</li>
           <li>columnsConfig.valueType = slot</li>
@@ -102,6 +103,7 @@
           <span>
             <el-button type="primary" @click="collapsed = !collapsed">手动展开、收起</el-button>
             <el-button type="primary" @click="reload">手动刷新</el-button>
+            <el-button type="primary" @click="getTableRef">获取引用</el-button>
           </span>
           <!-- end -->
         </ProTable>
@@ -130,13 +132,18 @@
             disabled: true
           },
           {
+            width: 100,
             label: '标题1',
             prop: 'title1',
             valueType: 'input',
             renderLabel: () => (
               <span style="color: #f56c6c">标题1</span>
             ),
-            order: 1
+            renderCell: (scope) => {
+              return `helllllllllllllll${scope.row.title1}`
+            },
+            order: 1,
+            'show-overflow-tooltip': true
           },
           {
             label: '标题2',
@@ -182,14 +189,30 @@
             ])
           },
           {
-            label: 'hideInSearch',
+            label: '标题7',
             prop: 'title7',
+            valueType: 'select',
+            optionLoader: () => {
+              return new Promise(resolve => {
+                setTimeout(() => {
+                  resolve([
+                    { label: '全部', value: 'all' },
+                    { label: '未解决', value: 'open' },
+                    { label: '已解决', value: 'close' },
+                  ])
+                }, 1000)
+              })
+            }
+          },
+          {
+            label: 'hideInSearch',
+            prop: 'title8',
             valueType: 'input',
             hideInSearch: true
           },
           {
             label: 'hideInTable',
-            prop: 'title8',
+            prop: 'title9',
             valueType: 'input',
             hideInTable: true
           },
@@ -207,7 +230,7 @@
               <el-button type="text">详情</el-button>,
               <el-button type="text">编辑</el-button>
             ],
-            key: 'action',
+            key: 'option',
           }
         ]
       },
@@ -285,6 +308,10 @@
       },
       reload() {
         this.$refs.proTableRef.reload()
+      },
+      getTableRef() {
+        const ref = this.$refs.proTableRef.getTableRef()
+        console.log('ref', ref)
       }
     },
   }
