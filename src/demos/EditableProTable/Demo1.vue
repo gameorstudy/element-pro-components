@@ -54,6 +54,14 @@
             this.editableKeys = editableKeys
             console.log('editableRows', editableRows)
           },
+          onSave: (recordKey, row, originRow) => {
+            console.log(recordKey, row, originRow)
+            return new Promise((resolve) => {
+              setTimeout(() => {
+                resolve(true)
+              }, 1000)
+            })
+          }
         }
       },
       columns() {

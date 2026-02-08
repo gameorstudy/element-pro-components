@@ -239,9 +239,15 @@ setRowData?: (rowIndex: string | number, data: Partial<T>) => void;
   </tr>
   <tr>
     <td>newRecordType</td>
-    <td>新增一行的方式，默认是缓存，取消后就会消失。如果设置为 dataSource，取消后也不会消失，只能删除</td>
+    <td>新增一行的方式，默认是缓存，取消后就会消失，设置为 dataSource，取消后也不会消失，只能删除</td>
     <td><code>dataSource | cache</code></td>
     <td><code>cache</code></td>
+  </tr>
+  <tr>
+    <td>onlyAddOneLineAlertMessage</td>
+    <td>只能同时新增一行的提示，<code>newRecordType</code> 设置 <code>cache</code> 时会校验</td>
+    <td><code>string</code></td>
+    <td><code>只能新增一行</code></td>
   </tr>
   <tr>
     <td>record</td>
@@ -270,6 +276,7 @@ setRowData?: (rowIndex: string | number, data: Partial<T>) => void;
   </tr>
 </table>
 
+/**
 record 用法
 ```
 /**
@@ -369,15 +376,9 @@ record: (index: number, dataSource: DataSourceType[]) => {
   </tr>
   <tr>
     <td>onlyOneLineEditorAlertMessage</td>
-    <td>只能编辑一行的的提示，支持布尔值，值为 <code>false</code> 时放开限制</td>
-    <td><code>string | boolean</code></td>
-    <td><code>只能同时编辑一行，支持布尔值，值为 <code>false</code> 时放开限制</code></td>
-  </tr>
-  <tr>
-    <td>onlyAddOneLineAlertMessage</td>
-    <td>只能同时新增一行的提示，支持布尔值</td>
-    <td><code>string | boolean</code></td>
-    <td><code>只能新增一行</code></td>
+    <td>只能编辑一行的的提示</td>
+    <td><code>string</code></td>
+    <td><code>只能同时编辑一行</td>
   </tr>
 </table>
 
@@ -477,7 +478,7 @@ renderOption 自定义操作栏 action 字段类型
 ```
 action: {
   startEditable: (rowKey: React.Key) => boolean; // 开始编辑指定字段
-  cancelEditable: (rowKey: React.Key) => boolean; // 取消编辑
+  cancelEditable: (rowKey: React.Key) => void; // 取消编辑
   saveEditable: (rowKey: React.Key) => Promise<boolean>; // 保存编辑
   addEditRecord: (record: T) => void; // 新增一行
   editableKeys: React.Key[]; // 正在编辑的行

@@ -73,15 +73,22 @@
             <!-- start -->
             <template v-if="column.nonElColumnProps.valueType === 'option'">
               <RenderOption
-                :isEditable="isEditable(scope.row)"
-                :render="() => column.nonElColumnProps.renderCell(
+                :render="(action) => column.nonElColumnProps.renderCell(
                   scope.row,
                   scope.$index,
-                  { startEditable }
+                  action
                 )"
+                :action="{ validateCanStartEdit }"
+                :dataSource="dataSource"
                 :row="scope.row"
+                :rowKey="rowKey"
                 :recordCreatorProps="initializedRecordCreatorProps"
                 :editable="initializedEditable"
+                :isEditable="isEditable(scope.row)"
+                :isNewLineRecordCache="newLineRecordCache?.options.recordKey === scope.row[rowKey]"
+                @cancel="onCancel"
+                @save="onSave"
+                @delete="onDelete"
               />
             </template>
             <!-- end -->
@@ -207,6 +214,7 @@
             position: 'bottom',
             newRecordType: 'cache',
             creatorButtonText: '添加一行数据',
+            onlyAddOneLineAlertMessage: '只能新增一行'
           }
           if (typeof recordCreatorProps === 'object') {
             return {
@@ -229,7 +237,6 @@
           cancelText: '取消',
           deletePopconfirmMessage: '删除此项？',
           onlyOneLineEditorAlertMessage: '只能同时编辑一行',
-          onlyAddOneLineAlertMessage: '只能新增一行'
         }
 
         return {
@@ -328,6 +335,7 @@
         dataSource: this.value, // 表格数据
         cachedOptions: {}, // 下拉数据 { [prop]: data }
         tableKey: 1, // table key
+        newLineRecordCache: null, // newRecordType: cache 的新增记录
       }
     },
     watch: {
@@ -372,18 +380,25 @@
       /**
        * @desc 新增一行的方法
        * @param {Object | Function} record 新增行的默认值
-       * @param {Object} newLineConfig 新增行的配置
-       * @param {String} newLineConfig.position 顶部添加还是末尾添加
-       * @param {String} newLineConfig.newRecordType 新增一行的方式
+       * @param {Object} AddLineOptions 新增行的配置
+       * @param {String} AddLineOptions.position 顶部添加还是末尾添加
+       * @param {String} AddLineOptions.newRecordType 新增一行的方式
        */
-      addEditRecord(record, newLineConfig) {
-        const { initializedEditable: { type, editableKeys, onlyAddOneLineAlertMessage } } = this
-        if (editableKeys.length && type === 'single' && onlyAddOneLineAlertMessage !== false) {
+      addEditRecord(record, AddLineOptions) {
+        const { initializedRecordCreatorProps: { onlyAddOneLineAlertMessage } } = this
+        const { newRecordType = 'cache' } = AddLineOptions
+        const { initializedEditable: { editableKeys } } = this
+        // 只能新增一行校验
+        if (this.newLineRecordCache) {
           this.$message.warning(onlyAddOneLineAlertMessage)
           return
         }
+        // 只能同时编辑一行校验
+        if (!this.validateCanStartEdit()) {
+          return
+        }
 
-        const { position = 'bottom', newRecordType = 'cache' } = newLineConfig
+        const { position = 'bottom' } = AddLineOptions
         const { dataSource } = this
         const index = position === 'bottom' ? dataSource.length : 0
         const newRecord = typeof record === 'function' ? record(index, dataSource) : record
@@ -392,12 +407,27 @@
           console.error('Error: 请设置 recordCreatorProps.record 并返回一个唯一的key')
           return
         }
+
+        // 赋值
+        if (newRecordType !== 'dataSource') {
+          this.newLineRecordCache = {
+            defaultValue: newRecord,
+            options: {
+              ...AddLineOptions,
+              recordKey: newRecord[rowKey],
+            },
+          }
+        } else {
+          this.newLineRecordCache = undefined
+        }
+
         dataSource[position === 'bottom' ? 'push' : 'unshift'](newRecord)
         
         // 更新 editableKeys
-        const newKeys = [...editableKeys, rowKey ? newRecord[rowKey] : index]
+        const newKeys = [...editableKeys, newRecord[rowKey]]
         const editableRows = dataSource.filter(item => editableKeys.includes(item[rowKey]))
-        this.initializedEditable?.onChange(newKeys, editableRows)
+        const { initializedEditable: { onChange } } = this
+        onChange?.(newKeys, editableRows)
       },
       /**
        * @desc 内置新增一行的方法
@@ -433,32 +463,30 @@
        */
       validateCanStartEdit() {
         const { initializedEditable: { type, editableKeys, onlyOneLineEditorAlertMessage } } = this
-        if (editableKeys.length && type === 'single' && onlyOneLineEditorAlertMessage !== false) {
+        if (editableKeys.length && type === 'single') {
           this.$message.warning(onlyOneLineEditorAlertMessage)
           return false
         }
 
         return true
       },
-      /**
-       * @desc 开始编辑指定字段
-       * @param {String | Number} recordKey 值
-       * @returns {Boolean}
-       */
-      startEditable(recordKey) {
-        if (!this.validateCanStartEdit()) {
-          return false
+      onCancel(recordKey) {
+        const index = this.dataSource.findIndex(item => item[this.rowKey] = recordKey)
+        if (index !== -1) {
+          this.dataSource.splice(index, 1)
         }
-
-        const { initializedEditable: { editableKeys } } = this
-
-        const isAlreadyEditable = editableKeys?.some(key => key === recordKey)
-
-        if (!isAlreadyEditable) {
-          this.initializedEditable?.onChange([...editableKeys, recordKey])
+        this.newLineRecordCache = undefined
+      },
+      onSave(recordKey) {
+        if (this.newLineRecordCache.options.recordKey === recordKey) {
+          this.newLineRecordCache = undefined
         }
-
-        return true
+      },
+      onDelete(recordKey) {
+        const index = this.dataSource.findIndex(item => item[this.rowKey] = recordKey)
+        if (index !== -1) {
+          this.dataSource.splice(index, 1)
+        }
       }
     }
   }
