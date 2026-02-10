@@ -1,5 +1,5 @@
 <template>
-  <span :class="{ 'text-ellipsis': column['show-overflow-tooltip'] }">{{ value }}</span>
+  <span :class="{ 'text-ellipsis': column['show-overflow-tooltip'] }">{{ value ?? '-' }}</span>
 </template>
 
 <script>

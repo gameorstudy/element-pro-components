@@ -12,7 +12,7 @@
       <!-- end -->
     </template>
     <template v-if="formItem.valueType !== 'slot'">
-      <component 
+      <component
         :is="`el-${formItem.valueType}`"
         v-model="form[formItem.prop]"
         v-bind="formItem.fieldProps"
@@ -72,7 +72,7 @@
   import CustomRender from '@/components/CustomRender'
   
   export default {
-    name: 'ProFormItem',
+    name: 'EditableFormItem',
     components: {
       CustomRender,
     },
@@ -101,6 +101,15 @@
       },
       rowKey: {
         type: [Number, String]
+      },
+      index: {
+        type: Number
+      },
+      recordKey: {
+        type: [Number, String]
+      },
+      formRef: {
+        type: Object
       }
     },
     computed: {
@@ -140,7 +149,7 @@
       },
       // 表单事件
       initializedFieldEvents() {
-        const { formItem: { fieldEvents }, editable, scope, rowKey } = this
+        const { formItem: { fieldEvents = {} }, editable, scope, rowKey } = this
 
         if (!fieldEvents) {
           return undefined
@@ -172,12 +181,11 @@
         selection: { // 选项组对应的组件
           'radio-group': 'el-radio',
           'checkbox-group': 'el-checkbox'
-        }
+        },
       }
-    }
+    },
   }
 </script>
 
 <style scoped>
-
 </style>

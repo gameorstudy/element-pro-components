@@ -29,9 +29,18 @@
       action: {
         type: Object
       },
+      name: {
+        type: String,
+      },
       dataSource: {
         type: Array
-      }
+      },
+      index: {
+        type: Number
+      },
+      validateRowData: {
+        type: Function
+      },
     },
     data() {
       return {
@@ -76,25 +85,32 @@
 
         const newKeys = editableKeys.filter(item => item !== recordKey)
         onChange?.(newKeys)
+        this.$emit('cancelEditable', recordKey)
       },
-      async save() {
-        try {
-          this.loading = true
-          const recordKey = this.row[this.rowKey]
-          const res = await this.editable.onSave(recordKey, this.row, this.preEditRow, null)
-          this.loading = false
-          if (res === false) {
+      save() {
+        this.validateRowData(this.index).then(async (valid) => {
+          if (!valid) {
             return
           }
+          
+          try {
+            this.loading = true
+            const recordKey = this.row[this.rowKey]
+            const res = await this.editable.onSave(recordKey, this.row, this.preEditRow, null)
+            this.loading = false
+            if (res === false) {
+              return
+            }
 
-          this.cancelEditable(recordKey)
-          if (this.isNewLineRecordCache) {
-            this.$emit('save', recordKey)
+            this.cancelEditable(recordKey)
+            if (this.isNewLineRecordCache) {
+              this.$emit('save', recordKey)
+            }
+          } catch (err) {
+            console.error('err', err)
+            this.loading = false
           }
-        } catch (err) {
-          console.error('err', err)
-          this.loading = false
-        }
+        })
       },
       async cancel() {
         const recordKey = this.row[this.rowKey]
@@ -121,7 +137,7 @@
       const doms = {
         save: <el-button type="text" class="btn-save" loading={this.loading} onClick={this.save}>{ saveText }</el-button>,
         cancel: <el-button type="text" class="btn-cancel" onClick={this.cancel}>{ cancelText }</el-button>,
-        delete: <el-popover placement="top" popper-class="delete-popover-message" trigger="click" value={this.visible} onInput={val => this.visible = val}>
+        delete: <el-popover placement="top" popper-class="delete-popover-message" trigger="click" value={this.visible} onInput={ val => this.visible = val }>
           <p>
             <i class="el-icon-warning" style="color: #ffad00; margin-right: 8px" />
             <span>{ deletePopconfirmMessage }</span>
@@ -138,8 +154,38 @@
 
       const action = { startEditable, cancelEditable }
 
+      const { editable: { editableKeys, onChange, actionRender, onSave, onCancel, onDelete } } = this
+      const { recordCreatorProps: { position, newRecordType } } = this
+
+      const config = {
+        editableKeys,
+        setEditableRowKeys: () => onChange?.(editableKeys),
+        index: this.index,
+        recordKey: this.row[this.rowKey],
+        deleteText,
+        deletePopconfirmMessage,
+        cancelText,
+        saveText,
+        onSave,
+        onCancel,
+        onDelete,
+        cancelEditable,
+        addEditRecord: this.action.addEditRecord,
+        preEditRow: this.preEditRow,
+        newLineConfig: {
+          defaultValue: '',
+          options: {
+            position,
+            newRecordType,
+            recordKey: this.row[this.rowKey]
+          }
+        }
+      }
+      const defaultDoms = [doms.save, doms.delete, doms.cancel].filter(Boolean)
+      const actionDoms = typeof actionRender === 'function' ? actionRender(this.row, config, doms) : defaultDoms
+      
       return <Fragment>
-        {!this.isEditable ? this.render(action) : [doms.save, !this.isNewLineRecordCache && doms.delete, doms.cancel].filter(Boolean)}
+        {!this.isEditable ? this.render(action) : actionDoms}
       </Fragment>
     }
   }

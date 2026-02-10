@@ -22,7 +22,7 @@
             <template v-if="column.nonElColumnProps.renderCellHeader" #header="scope">
               <!-- 覆写头部 -->
               <!-- start -->
-              <custom-render :render="() => column.nonElColumnProps.renderCellHeader(scope)" />
+              <CustomRender :render="() => column.nonElColumnProps.renderCellHeader(scope)" />
               <!-- end -->
             </template>
           </el-table-column>
@@ -45,7 +45,7 @@
       <!-- start -->
       <el-table
         ref="tableRef"
-        :data="dataSource"
+        :data="form[name]"
         :class="className"
         :size="defaultSize"
         v-bind="initializedTableProps"
@@ -65,27 +65,31 @@
           <template v-if="column.nonElColumnProps.renderCellHeader" #header="scope">
             <!-- 覆写头部 -->
             <!-- start -->
-            <custom-render :render="() => column.nonElColumnProps.renderCellHeader(scope)" />
+            <CustomRender :render="() => column.nonElColumnProps.renderCellHeader(scope)" />
             <!-- end -->
           </template>
           <template #default="scope">
             <!-- 操作栏 -->
             <!-- start -->
             <template v-if="column.nonElColumnProps.valueType === 'option'">
-              <RenderOption
+              <RenderEditable
                 :render="(action) => column.nonElColumnProps.renderCell(
                   scope.row,
                   scope.$index,
                   action
                 )"
-                :action="{ validateCanStartEdit }"
-                :dataSource="dataSource"
+                :validateRowData="validateRowData"
+                :action="{ validateCanStartEdit, addEditRecord }"
+                :dataSource="form[name]"
+                :name="name"
                 :row="scope.row"
+                :index="scope.$index"
                 :rowKey="rowKey"
                 :recordCreatorProps="initializedRecordCreatorProps"
                 :editable="initializedEditable"
                 :isEditable="isEditable(scope.row)"
                 :isNewLineRecordCache="newLineRecordCache?.options.recordKey === scope.row[rowKey]"
+                @cancelEditable="onCancelEditable"
                 @cancel="onCancel"
                 @save="onSave"
                 @delete="onDelete"
@@ -95,19 +99,18 @@
             <!-- 可编辑元素栏 -->
             <!-- start -->
             <template v-else>
-              <!-- pro-form-item -->
-              <!-- start -->
-              <ProFormItem
-                v-if="isEditable(scope.row)"
-                :formItemProp="`${name}.${scope.$index}.${column.prop}`"
+              <RenderCell
+                :editable="initializedEditable"
+                :column="column"
                 :formItem="formItems[index]"
-                :form="scope.row"
+                :name="name"
+                :scope="scope"
+                :rowKey="rowKey"
+                :recordKey="scope.row[rowKey]"
+                :index="scope.$index"
+                :preEditRows="preEditRows"
+                :formRef="formRef"
               />
-              <!-- end -->
-              <!-- 文本 -->
-              <!-- start -->
-              <CellView v-else :column="column" :formItem="formItems[index]" :scope="scope" />
-              <!-- end -->
             </template>
             <!-- end -->
           </template>
@@ -126,10 +129,9 @@
 
 <script>
   import CustomRender from '@/components/CustomRender'
-  import ProFormItem from '@/components/ProFormItem'
-  import RenderOption from './components/RenderOption.vue'
+  import RenderEditable from './components/RenderEditable.vue'
+  import RenderCell from './components/RenderCell.vue'
   import RecordCreatorButton from './components/RecordCreatorButton.vue'
-  import CellView from './components/CellView.vue'
   import { setPlaceholder, setSelectOptions, setCascaderOptions } from '@/utils/form'  
   import { generateCryptoUID } from '@/utils/uid'
 
@@ -138,10 +140,9 @@
     name: 'EditableProTable',
     components: {
       CustomRender,
-      ProFormItem,
-      RenderOption,
+      RenderEditable,
+      RenderCell,
       RecordCreatorButton,
-      CellView
     },
     props: {
       // 同 dataSource
@@ -174,7 +175,8 @@
       },
       // 表格的名称
       name: {
-        type: String
+        type: String,
+        default: 'dataSource'
       },
       // 组件内 el-table 的类名
       className: {
@@ -204,6 +206,9 @@
           return ['medium', 'small', 'mini'].includes(value)
         },
       },
+      formRef: {
+        type: [Object, undefined]
+      }
     },
     computed: {
       // recordCreatorProps 初始化
@@ -248,7 +253,7 @@
       exceedsMax() {
         const { maxLength } = this
         if (typeof maxLength === 'number') {
-          return this.dataSource.length >= maxLength
+          return this.form[this.name].length >= maxLength
         }
 
         return false
@@ -275,6 +280,8 @@
               optionLoader,
               renderCellHeader,
               renderCell,
+              editable,
+              readonly,
               key,
               ...keys
             } = col
@@ -284,6 +291,8 @@
                 valueType,
                 renderCellHeader,
                 renderCell,
+                editable,
+                readonly,
                 key,
               }
             }
@@ -308,6 +317,8 @@
               } = col
               // 设置 el-form-item
               formItemProps.prop = prop
+              formItemProps.label = ' '
+              formItemProps['label-width'] = '12px'
 
               // 设置 placeholder
               setPlaceholder(fieldProps, valueType)
@@ -332,16 +343,19 @@
     },
     data() {
       return {
-        dataSource: this.value, // 表格数据
+        form: {
+          [this.name]: this.value,
+        },
         cachedOptions: {}, // 下拉数据 { [prop]: data }
         tableKey: 1, // table key
-        newLineRecordCache: null, // newRecordType: cache 的新增记录
+        newLineRecordCache: undefined, // newRecordType: cache 的新增记录
+        preEditRows: new Map(), // 
       }
     },
     watch: {
       // 监听元数据变化
       value(newValue) {
-        this.dataSource = newValue
+        this.form[this.name] = newValue
       },
       // 监听位置修改
       'recordCreatorProps.position': {
@@ -371,11 +385,76 @@
           }
         }
       },
+      getFormRef() {
+        return this.formRef
+      },
+      getValidateFields(index) {
+        return this.formItems
+          .filter(item => item.rules)
+          .map(item => `${this.name}.${index}.${item.prop}`)
+      },
+      validateRowData(index) {
+        return new Promise(resolve => {
+          const formRef = this.getFormRef()
+          const fields = this.getValidateFields(index)
+          if (fields.length === 0) {
+            resolve(true)
+            return
+          }
+          
+          formRef.validateField(fields, err => {
+            if (err) {
+              resolve(false)
+            } else {
+              resolve(true)
+            }
+          })
+        })
+      },
+      validate() {
+        return new Promise(resolve => {
+          const formRef = this.getFormRef()
+          
+          formRef.validate(valid => {
+            resolve(valid)
+          })
+        })
+      },
       /**
        * @desc 获取 table ref
        */
       getTableRef() {
         return this.$refs.tableRef
+      },
+      /**
+       * @desc 获取行数据
+       */
+      getRowData(rowIndex) {
+        if (typeof rowIndex === 'number') {
+          return this.form[this.name][rowIndex]
+        } else if (typeof rowIndex === 'string') {
+          return this.form[this.name].find(item => item[this.rowKey] === rowIndex)
+        }
+      },
+      /**
+       * @desc 获取整个 table 的数据
+       */
+      getRowsData() {
+        return this.form[this.name]
+      },
+      /**
+       * @desc 设置一行的数据
+       */
+      setRowData(rowIndex, data) {
+        const dataSource = this.form[this.name]
+        if (typeof rowIndex === 'number') {
+          dataSource.splice(rowIndex, 1, { ...dataSource[rowIndex], ...data })
+        } else if (typeof rowIndex === 'string') {
+          const index = dataSource.findIndex(item => item[this.rowKey] === rowIndex)
+          if (index !== -1) {
+            dataSource.splice(index, 1, { ...dataSource[index], ...data })
+          }
+        }
       },
       /**
        * @desc 新增一行的方法
@@ -399,8 +478,9 @@
         }
 
         const { position = 'bottom' } = AddLineOptions
-        const { dataSource } = this
+        const dataSource = this.form[this.name]
         const index = position === 'bottom' ? dataSource.length : 0
+        
         const newRecord = typeof record === 'function' ? record(index, dataSource) : record
         const { rowKey } = this
         if (!newRecord[rowKey]) {
@@ -408,13 +488,17 @@
           return
         }
 
+        const originRow = typeof record === 'function' ? record(index, dataSource) : record
+        const newOriginRow = { ...originRow, [rowKey]: newRecord[rowKey] }
+        this.preEditRows.set(newRecord[rowKey], newOriginRow)
+
         // 赋值
         if (newRecordType !== 'dataSource') {
           this.newLineRecordCache = {
-            defaultValue: newRecord,
+            defaultValue: newOriginRow,
             options: {
               ...AddLineOptions,
-              recordKey: newRecord[rowKey],
+              recordKey: newOriginRow[rowKey],
             },
           }
         } else {
@@ -428,6 +512,14 @@
         const editableRows = dataSource.filter(item => editableKeys.includes(item[rowKey]))
         const { initializedEditable: { onChange } } = this
         onChange?.(newKeys, editableRows)
+
+        this.$nextTick(() => {
+          // 如果内嵌到了 el-form 则需要清除可能存在的表单校验
+          const fields = this.getValidateFields(index)
+          console.log(fields)
+          console.log(this.formRef)
+          this.formRef?.clearValidate(fields)
+        })
       },
       /**
        * @desc 内置新增一行的方法
@@ -457,6 +549,18 @@
 
         return true
       },
+      isColumnEditable(column) {
+        const { nonElColumnProps: { editable, readonly } } = column
+        if (readonly) {
+          return false
+        }
+
+        if (typeof editable === 'function') {
+          return editable(cellValue, record, scope.$index)
+        }
+
+        return true
+      },
       /**
        * @desc 验证是否可以开始编辑
        * @returns {Boolean}
@@ -470,10 +574,13 @@
 
         return true
       },
+      onCancelEditable(recordKey) {
+        this.preEditRows.delete(recordKey)
+      },
       onCancel(recordKey) {
-        const index = this.dataSource.findIndex(item => item[this.rowKey] = recordKey)
+        const index = this.form[this.name].findIndex(item => item[this.rowKey] = recordKey)
         if (index !== -1) {
-          this.dataSource.splice(index, 1)
+          this.form[this.name].splice(index, 1)
         }
         this.newLineRecordCache = undefined
       },
@@ -483,9 +590,9 @@
         }
       },
       onDelete(recordKey) {
-        const index = this.dataSource.findIndex(item => item[this.rowKey] = recordKey)
+        const index = this.form[this.name].findIndex(item => item[this.rowKey] = recordKey)
         if (index !== -1) {
-          this.dataSource.splice(index, 1)
+          this.form[this.name].splice(index, 1)
         }
       }
     }
@@ -495,6 +602,10 @@
 <style scoped>
 .editable-pro-table .table-head /deep/ .el-table__empty-block {
   min-height: unset;
+}
+
+.editable-pro-table /deep/ .el-form-item {
+  margin: 14px 0;
 }
 
 .editable-pro-table .table-head /deep/ .el-table__empty-text {
@@ -509,3 +620,19 @@
   width: 100%;
 }
 </style>
+
+<!-- 防止外部 el-form-item 校验错误影响 -->
+<style>
+.el-form-item.is-error .editable-pro-table .el-input__inner {
+  border-color: #DCDFE6;
+}
+
+.el-form-item.is-error .editable-pro-table .el-input__inner:focus {
+  border-color: #DCDFE6;
+}
+
+.editable-pro-table .el-form-item.is-error .el-input__inner {
+  border-color: #F56C6C;
+}
+</style>
+

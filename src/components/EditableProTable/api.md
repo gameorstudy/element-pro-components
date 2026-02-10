@@ -276,7 +276,6 @@ setRowData?: (rowIndex: string | number, data: Partial<T>) => void;
   </tr>
 </table>
 
-/**
 record 用法
 ```
 /**
@@ -450,7 +449,7 @@ const {save, cancel, delete} = defaultDom
   </tr>
   <tr>
     <td>renderCell</td>
-    <td>自定义表单</td>
+    <td>自定义查看态（文本）表单</td>
     <td><code>(scope) => jsx | jsx[]</code></td>
     <td>-</td>
   </tr>
@@ -462,8 +461,14 @@ const {save, cancel, delete} = defaultDom
   </tr>
   <tr>
     <td>editable</td>
-    <td>编辑校验</td>
+    <td>是否可编辑</td>
     <td><code>(cellValue, record, index) => boolean</code></td>
+    <td>-</td>
+  </tr>
+  <tr>
+    <td>readonly</td>
+    <td>只读</td>
+    <td><code>boolean</code></td>
     <td>-</td>
   </tr>
   <tr>
@@ -502,3 +507,5 @@ action: {
 > ProForm formItemsConfig 中 `valueEnum` 属性在列表中会自动回显 `label` 值。
 
 > el-table 的 formatter 在查看态（文本）时生效。
+
+> el-table 的 show-overflow-tooltip 在查看态（文本）时生效。
